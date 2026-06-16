@@ -1,1 +1,19 @@
 .env
+
+# IRIS data files - never commit
+data/raw/*
+data/bronze/*
+data/silver/*
+data/gold/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+
+# Environment and local files
+.env
+.venv/
+__pycache__/
+*.pyc
