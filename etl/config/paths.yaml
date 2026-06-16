@@ -1,0 +1,16 @@
+raw_dir: data/raw
+bronze_dir: data/bronze
+
+sources:
+  clients:
+    file: Clients.xlsx
+    sheet_name: 0
+  production:
+    file: Production.xlsx
+    sheet_name: 0
+  sinistres:
+    file: Sinistres.xlsx
+    sheet_name: 0
+  fiche_voiture_stafim:
+    file: FicheVoitureStafim.xlsx
+    sheet_name: 0

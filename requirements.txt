@@ -1,0 +1,6 @@
+pandas
+openpyxl
+pyarrow
+psycopg[binary]
+PyYAML
+python-dotenv
