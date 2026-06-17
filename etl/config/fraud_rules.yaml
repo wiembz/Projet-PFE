@@ -1,0 +1,80 @@
+- rule_code: DECLARATION_TARDIVE
+  rule_name: Déclaration tardive
+  rule_description: Délai de déclaration supérieur au seuil défini.
+  rule_category: DELAI
+  is_active: true
+  weight: 15
+  threshold_value: ">5 jours"
+  severity: MOYEN
+  requires_business_validation: false
+  rule_version: "v1"
+- rule_code: DECLARATION_ANTIDATEE
+  rule_name: Déclaration antidatée
+  rule_description: Date de déclaration antérieure à la date de survenance.
+  rule_category: CHRONOLOGIE
+  is_active: true
+  weight: 25
+  threshold_value: "DTDECSNT < DTSURV"
+  severity: ELEVE
+  requires_business_validation: true
+  rule_version: "v1"
+- rule_code: SINISTRE_AVANT_CONTRAT
+  rule_name: Sinistre avant effet du contrat
+  rule_description: Date de survenance antérieure à la date de début d'effet.
+  rule_category: CHRONOLOGIE
+  is_active: true
+  weight: 30
+  threshold_value: "DTSURV < DEBEFFET"
+  severity: ELEVE
+  requires_business_validation: true
+  rule_version: "v1"
+- rule_code: SINISTRE_PRECOCE
+  rule_name: Sinistre précoce
+  rule_description: Sinistre survenu peu après le début d'effet du contrat.
+  rule_category: CHRONOLOGIE
+  is_active: true
+  weight: 10
+  threshold_value: "<=30 jours"
+  severity: FAIBLE
+  requires_business_validation: false
+  rule_version: "v1"
+- rule_code: MONTANT_TOTAL_ELEVE
+  rule_name: Montant total élevé
+  rule_description: Montant total du sinistre supérieur au seuil de vigilance.
+  rule_category: MONTANT
+  is_active: true
+  weight: 20
+  threshold_value: ">100000"
+  severity: MOYEN
+  requires_business_validation: false
+  rule_version: "v1"
+- rule_code: MONTANT_TOTAL_NET_NEGATIF
+  rule_name: Montant total net négatif
+  rule_description: Montant total net inférieur à zéro.
+  rule_category: MONTANT
+  is_active: true
+  weight: 10
+  threshold_value: "<0"
+  severity: FAIBLE
+  requires_business_validation: false
+  rule_version: "v1"
+- rule_code: CONTRAT_INCONNU
+  rule_name: Contrat non rattaché
+  rule_description: Le sinistre n'a pas pu être rattaché à un contrat connu.
+  rule_category: QUALITE_DONNEES
+  is_active: true
+  weight: 10
+  threshold_value: "contrat_sk = 0"
+  severity: FAIBLE
+  requires_business_validation: false
+  rule_version: "v1"
+- rule_code: CLIENT_INCONNU
+  rule_name: Client non rattaché
+  rule_description: Le sinistre n'a pas pu être rattaché à un client connu.
+  rule_category: QUALITE_DONNEES
+  is_active: true
+  weight: 10
+  threshold_value: "client_sk = 0"
+  severity: FAIBLE
+  requires_business_validation: false
+  rule_version: "v1"
