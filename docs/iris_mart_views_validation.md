@@ -1,6 +1,6 @@
 # IRISv2 Mart Views Validation
 
-Generated at: 2026-06-17T13:56:17
+Generated at: 2026-06-17T14:56:45
 
 This validation is read-only. It queries existing `iris_mart` views and does not modify PostgreSQL objects or run scoring.
 
@@ -61,9 +61,9 @@ This validation is read-only. It queries existing `iris_mart` views and does not
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 | UNKNOWN | UNKNOWN |  |  |  | 28 | 12 | 58916.113 | 0 | 0 | 2026-03-06 |
 | 1 | 55 | CL |  |  | SFAX TUNISIE | 0 | 0 |  | 0 | 0 |  |
-| 2 | 132 | CL |  |  | MARETH | 0 | 0 |  | 0 | 0 |  |
-| 3 | 167 | CL |  |  | EL JEM | 0 | 0 |  | 0 | 0 |  |
-| 4 | 170 | CL |  |  | SFAX | 0 | 0 |  | 0 | 0 |  |
+| 2 | 132 | CL |  | GABES | MARETH | 0 | 0 |  | 0 | 0 |  |
+| 3 | 167 | CL |  | MAHDIA | EL JEM | 0 | 0 |  | 0 | 0 |  |
+| 4 | 170 | CL |  | SFAX | SFAX | 0 | 0 |  | 0 | 0 |  |
 
 ### vw_dashboard_global
 
@@ -97,11 +97,11 @@ Extra checks:
 
 | num_sinistre | sinistre_sk | code_garantie | libelle_garantie | score_global | risk_level | confidence_level | rule_code | rule_name | rule_category | observed_value | threshold_value | rule_weight | rule_contribution |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S17511000003111 | 6 | ASR |  | 7.692300 | NORMAL | RULE_BASED | CONTRAT_INCONNU | Contrat non rattaché | QUALITE_DONNEES | contrat_sk=0 | contrat_sk = 0 | 10.0000 | 10.000000 |
-| S17511000003111 | 7 | CAS |  | 7.692300 | NORMAL | RULE_BASED | CONTRAT_INCONNU | Contrat non rattaché | QUALITE_DONNEES | contrat_sk=0 | contrat_sk = 0 | 10.0000 | 10.000000 |
-| S17511000003111 | 8 | RCM |  | 7.692300 | NORMAL | RULE_BASED | CONTRAT_INCONNU | Contrat non rattaché | QUALITE_DONNEES | contrat_sk=0 | contrat_sk = 0 | 10.0000 | 10.000000 |
-| S17511000022208 | 9 | CAS |  | 7.692300 | NORMAL | RULE_BASED | CONTRAT_INCONNU | Contrat non rattaché | QUALITE_DONNEES | contrat_sk=0 | contrat_sk = 0 | 10.0000 | 10.000000 |
-| S17511000022208 | 10 | TR |  | 7.692300 | NORMAL | RULE_BASED | CONTRAT_INCONNU | Contrat non rattaché | QUALITE_DONNEES | contrat_sk=0 | contrat_sk = 0 | 10.0000 | 10.000000 |
+| S24510000001539 | 1744 | CAS |  | 19.230800 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 446.0 | >5 jours | 15.0000 | 15.000000 |
+| S17511000028563 | 11 | CAS |  | 19.230800 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 20.0 | >5 jours | 15.0000 | 15.000000 |
+| S17511000028563 | 12 | IDA |  | 19.230800 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 20.0 | >5 jours | 15.0000 | 15.000000 |
+| S22510000000245 | 14840 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 42.0 | >5 jours | 15.0000 | 15.000000 |
+| S18511000008713 | 20026 | RCM |  | 19.230800 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 76.0 | >5 jours | 15.0000 | 15.000000 |
 
 ### vw_vehicle_history
 
@@ -127,6 +127,6 @@ Extra checks:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 340433 | S22510000000829 | RCM |  | 432905 | 2557917 | CL | BIZERTE | UNKNOWN | UNKNOWN | UNKNOWN | 81201 | 6920TU105 |  |  |  | 522 | FLOTTE ENTREPRISE | 2022-11-25 | 2022-12-19 | 383000.000 | 383000.000 | 24 | 324 | False | True | False | False | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | CONTRAT_INCONNU, DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE |  |  |  |  | Déclaration tardive |
 | 2 | 275793 | S23510000000678 | RCC |  | 177978 | 2697822 | CL | MANNOUBA | 201850000043199 | 2 | 0 | 84371 | 7147TU139 |  |  |  | 551 | USAGE TPM (SUP À 3.5 T) | 2023-07-01 | 2023-12-01 | 362073.197 | 362073.197 | 153 | 22 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
-| 3 | 295707 | S19511000003767 | RCM |  | 336854 | 1592731 | CL |  | 201950000001727 | 0 | 1 | 24798 | 2788TU68 |  |  |  | 542 | UTILITAIRE (SUP.à 3.5T) | 2019-02-06 | 2019-02-15 | 349000.000 | 349000.000 | 9 | 27 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
+| 3 | 295707 | S19511000003767 | RCM |  | 336854 | 1592731 | CL | ARIANA | 201950000001727 | 0 | 1 | 24798 | 2788TU68 |  |  |  | 542 | UTILITAIRE (SUP.à 3.5T) | 2019-02-06 | 2019-02-15 | 349000.000 | 349000.000 | 9 | 27 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
 | 4 | 275791 | S23510000000678 | CONS |  | 177978 | 2697822 | CL | MANNOUBA | 201850000043199 | 2 | 0 | 84371 | 7147TU139 |  |  |  | 551 | USAGE TPM (SUP À 3.5 T) | 2023-07-01 | 2023-12-01 | 327645.817 | 327645.817 | 153 | 22 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
-| 5 | 346010 | S23510000000301 | RCC |  | 329617 | 1489735 | CL |  | 202150000011465 | 0 | 2 | 79148 | 6771TU81 |  |  |  | 521 | AFFAIRE ET PROMENADE | 2023-04-30 | 2023-08-15 | 195588.687 | 195588.687 | 107 | 7 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
+| 5 | 346010 | S23510000000301 | RCC |  | 329617 | 1489735 | CL | JENDOUBA | 202150000011465 | 0 | 2 | 79148 | 6771TU81 |  |  |  | 521 | AFFAIRE ET PROMENADE | 2023-04-30 | 2023-08-15 | 195588.687 | 195588.687 | 107 | 7 | False | True | False | True | 34.615400 |  |  | 34.615400 | FAIBLE | RULE_BASED | 3 | DECLARATION_TARDIVE, MONTANT_TOTAL_ELEVE, SINISTRE_PRECOCE |  |  |  |  | Déclaration tardive |
