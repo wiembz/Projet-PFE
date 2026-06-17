@@ -1,14 +1,14 @@
 # IRISv2 Mart Views Validation
 
-Generated at: 2026-06-17T13:38:40
+Generated at: 2026-06-17T13:56:17
 
 This validation is read-only. It queries existing `iris_mart` views and does not modify PostgreSQL objects or run scoring.
 
 ## 1. Summary
 
-- final_status: `WARNING`
+- final_status: `OK`
 - view_count: `6`
-- warning_count: `1`
+- warning_count: `0`
 - failure_count: `0`
 
 ## 2. View Inventory
@@ -19,7 +19,7 @@ This validation is read-only. It queries existing `iris_mart` views and does not
 | vw_dashboard_global | OK | 12 |
 | vw_dossier_360 | OK | 54 |
 | vw_score_explanation | OK | 14 |
-| vw_vehicle_history | WARNING | 15 |
+| vw_vehicle_history | OK | 15 |
 | vw_worklist_investigation | OK | 42 |
 
 ## 3. Row Counts
@@ -30,12 +30,12 @@ This validation is read-only. It queries existing `iris_mart` views and does not
 | vw_dashboard_global | OK | 1 | View compiled and returned coherent row counts |
 | vw_dossier_360 | OK | 381893 | View compiled and returned coherent row counts |
 | vw_score_explanation | OK | 194256 | View compiled and returned coherent row counts |
-| vw_vehicle_history | WARNING | 128130 | dernier_vhs_score is null for all vehicle rows; VHS scoring may not have run yet |
+| vw_vehicle_history | OK | 128130 | View compiled and returned coherent row counts |
 | vw_worklist_investigation | OK | 381893 | View compiled and returned coherent row counts |
 
 ## 4. Score/VHS Readiness Warnings
 
-- vw_vehicle_history: dernier_vhs_score is null for all vehicle rows; VHS scoring may not have run yet
+- No score/VHS readiness warnings.
 
 ## 5. Failures
 
@@ -107,7 +107,7 @@ Extra checks:
 
 Extra checks:
 - row_count: `128130`
-- dernier_vhs_score_not_null_count: `0`
+- dernier_vhs_score_not_null_count: `224`
 
 | vehicule_sk | immatriculation | vin | marque | modele | genre_vehicule | usage_vehicule | motorisation | nb_sinistres | nb_inspections | montant_total_sinistres | dernier_vhs_score | dernier_safety_grade | derniere_vhs_decision | dernier_is_drivable |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
