@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Iterator
+from typing import Any, Iterator
 
 import psycopg
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ REQUIRED_ENV_VARS = (
 )
 
 
-def get_connection() -> Connection:
+def _load_db_config() -> dict[str, str]:
     load_dotenv()
 
     missing = [name for name in REQUIRED_ENV_VARS if not os.getenv(name)]
@@ -27,13 +27,20 @@ def get_connection() -> Connection:
         names = ", ".join(missing)
         raise RuntimeError(f"Missing PostgreSQL environment variables: {names}")
 
-    return psycopg.connect(
-        host=os.environ["IRIS_DB_HOST"],
-        port=os.environ["IRIS_DB_PORT"],
-        dbname=os.environ["IRIS_DB_NAME"],
-        user=os.environ["IRIS_DB_USER"],
-        password=os.environ["IRIS_DB_PASSWORD"],
-    )
+    return {
+        "host": os.environ["IRIS_DB_HOST"],
+        "port": os.environ["IRIS_DB_PORT"],
+        "dbname": os.environ["IRIS_DB_NAME"],
+        "user": os.environ["IRIS_DB_USER"],
+        "password": os.environ["IRIS_DB_PASSWORD"],
+    }
+
+
+def get_connection() -> Connection:
+    """
+    Create a direct psycopg connection using the locked IRIS_DB_* settings.
+    """
+    return psycopg.connect(**_load_db_config())
 
 
 @contextmanager
@@ -43,6 +50,22 @@ def managed_connection() -> Iterator[Connection]:
         yield conn
     finally:
         conn.close()
+
+
+def get_engine() -> Any:
+    """
+    Compatibility hook for legacy scripts that still use SQLAlchemy.
+    New loaders should prefer get_connection().
+    """
+    from sqlalchemy import create_engine
+
+    config = _load_db_config()
+    url = (
+        f"postgresql+psycopg2://{config['user']}:{config['password']}"
+        f"@{config['host']}:{config['port']}/{config['dbname']}"
+    )
+
+    return create_engine(url, future=True)
 
 
 def start_etl_run(
@@ -137,6 +160,15 @@ def finish_etl_run(
         if cur.rowcount != 1:
             raise RuntimeError(f"etl_run row not found for etl_run_id={etl_run_id}")
     conn.commit()
+
+
+def assert_etl_run_table_compatible() -> None:
+    """
+    Fail fast if iris_admin.etl_run is missing required columns.
+    No automatic DDL.
+    """
+    with managed_connection() as conn:
+        _assert_etl_run_contract(conn)
 
 
 def _assert_etl_run_contract(conn: Connection) -> None:
