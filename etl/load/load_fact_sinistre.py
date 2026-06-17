@@ -16,6 +16,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from etl.common.db import get_connection
+from etl.common.normalization import (
+    normalize_code,
+    normalize_formula_code,
+    normalize_product_natural_key,
+)
 
 
 SILVER_DIR = PROJECT_ROOT / "data" / "silver"
@@ -215,6 +220,10 @@ class LookupStats:
     unknown_intermediaire_count: int
     unknown_delegation_count: int
     unknown_cause_sinistre_count: int
+    product_exact_formula_match_count: int
+    product_unknown_formula_match_count: int
+    product_controlled_product_fallback_count: int
+    product_no_match_count: int
     unknown_date_survenance_count: int
     unknown_date_declaration_count: int
     unknown_date_ouverture_count: int
@@ -252,6 +261,10 @@ class LoadStats:
     unknown_intermediaire_count: int
     unknown_delegation_count: int
     unknown_cause_sinistre_count: int
+    product_exact_formula_match_count: int
+    product_unknown_formula_match_count: int
+    product_controlled_product_fallback_count: int
+    product_no_match_count: int
     unknown_date_survenance_count: int
     unknown_date_declaration_count: int
     unknown_date_ouverture_count: int
@@ -284,6 +297,13 @@ def main() -> None:
     print(f"contrat_no_match_count={stats.contrat_no_match_count}")
     print(f"unknown_vehicule_count={stats.unknown_vehicule_count}")
     print(f"unknown_produit_count={stats.unknown_produit_count}")
+    print(f"product_exact_formula_match_count={stats.product_exact_formula_match_count}")
+    print(f"product_unknown_formula_match_count={stats.product_unknown_formula_match_count}")
+    print(
+        "product_controlled_product_fallback_count="
+        f"{stats.product_controlled_product_fallback_count}"
+    )
+    print(f"product_no_match_count={stats.product_no_match_count}")
     print(f"unknown_garantie_count={stats.unknown_garantie_count}")
     print(f"unknown_intermediaire_count={stats.unknown_intermediaire_count}")
     print(f"unknown_delegation_count={stats.unknown_delegation_count}")
@@ -357,6 +377,16 @@ def load_fact_sinistre(etl_run_id: str) -> LoadStats:
         unknown_intermediaire_count=lookup_stats.unknown_intermediaire_count,
         unknown_delegation_count=lookup_stats.unknown_delegation_count,
         unknown_cause_sinistre_count=lookup_stats.unknown_cause_sinistre_count,
+        product_exact_formula_match_count=(
+            lookup_stats.product_exact_formula_match_count
+        ),
+        product_unknown_formula_match_count=(
+            lookup_stats.product_unknown_formula_match_count
+        ),
+        product_controlled_product_fallback_count=(
+            lookup_stats.product_controlled_product_fallback_count
+        ),
+        product_no_match_count=lookup_stats.product_no_match_count,
         unknown_date_survenance_count=lookup_stats.unknown_date_survenance_count,
         unknown_date_declaration_count=lookup_stats.unknown_date_declaration_count,
         unknown_date_ouverture_count=lookup_stats.unknown_date_ouverture_count,
@@ -426,7 +456,7 @@ def _build_sinistre_rows(dataframe: pd.DataFrame, etl_run_id: str) -> pd.DataFra
         sinistres,
         "vehicule_business_key",
     )
-    sinistres["produit_natural_key"] = _combine_key_parts(sinistres, ("CODFAM", "CODPROD"))
+    _add_product_lookup_columns(sinistres)
     sinistres["garantie_natural_key"] = _source_key_or_null(sinistres, "GRNTSINI")
     sinistres["intermediaire_natural_key"] = _combine_key_parts(
         sinistres,
@@ -464,6 +494,7 @@ def _key_columns_to_clean(dataframe: pd.DataFrame) -> list[str]:
         "IDCLT",
         "CODFAM",
         "CODPROD",
+        "CODFORMU",
         "NATINT",
         "IDINT",
         "IDDELEGA",
@@ -480,6 +511,22 @@ def _source_key_or_null(dataframe: pd.DataFrame, column: str) -> pd.Series:
     if column not in dataframe.columns:
         return pd.Series(pd.NA, index=dataframe.index, dtype="string")
     return dataframe[column].map(_clean_key_value)
+
+
+def _add_product_lookup_columns(dataframe: pd.DataFrame) -> None:
+    if "CODFORMU" not in dataframe.columns:
+        dataframe["CODFORMU"] = pd.NA
+
+    product_code = dataframe["CODPROD"].map(normalize_code)
+    formula_code = dataframe["CODFORMU"].map(normalize_formula_code)
+    formula_missing = formula_code.eq("UNKNOWN")
+
+    dataframe["product_code_lookup"] = product_code
+    dataframe["formula_code_lookup"] = formula_code
+    dataframe["product_formula_missing"] = formula_missing
+    dataframe["produit_natural_key"] = (
+        product_code.astype("string") + "|" + formula_code.astype("string")
+    ).mask(product_code.isna(), pd.NA)
 
 
 def _add_chronological_indicators(dataframe: pd.DataFrame) -> IndicatorStats:
@@ -555,8 +602,11 @@ def _days_between(start_date: date | None, end_date: date | None) -> int | None:
 def _apply_lookup_sks(cur: Any, dataframe: pd.DataFrame) -> LookupStats:
     unknown_counts: dict[str, int] = {}
     contrat_stats = _apply_contrat_lookup(cur, dataframe)
+    product_stats = _apply_product_lookup(cur, dataframe)
 
     for lookup in LOOKUPS:
+        if lookup.label == "produit":
+            continue
         values_by_key = _load_lookup_values(
             cur,
             table_name=lookup.table_name,
@@ -585,11 +635,21 @@ def _apply_lookup_sks(cur: Any, dataframe: pd.DataFrame) -> LookupStats:
         unknown_client_count=unknown_counts["client"],
         unknown_contrat_count=contrat_stats.unknown_contrat_count,
         unknown_vehicule_count=unknown_counts["vehicule"],
-        unknown_produit_count=unknown_counts["produit"],
+        unknown_produit_count=product_stats["product_no_match_count"],
         unknown_garantie_count=unknown_counts["garantie"],
         unknown_intermediaire_count=unknown_counts["intermediaire"],
         unknown_delegation_count=unknown_counts["delegation"],
         unknown_cause_sinistre_count=unknown_counts["cause_sinistre"],
+        product_exact_formula_match_count=product_stats[
+            "product_exact_formula_match_count"
+        ],
+        product_unknown_formula_match_count=product_stats[
+            "product_unknown_formula_match_count"
+        ],
+        product_controlled_product_fallback_count=product_stats[
+            "product_controlled_product_fallback_count"
+        ],
+        product_no_match_count=product_stats["product_no_match_count"],
         unknown_date_survenance_count=date_unknown_counts["date_survenance_sk"],
         unknown_date_declaration_count=date_unknown_counts["date_declaration_sk"],
         unknown_date_ouverture_count=date_unknown_counts["date_ouverture_sk"],
@@ -663,6 +723,116 @@ def _apply_contrat_lookup(cur: Any, dataframe: pd.DataFrame) -> ContratLookupSta
         contrat_pair_max_nummaj_fallback_count=pair_max_nummaj_fallback_count,
         contrat_no_match_count=no_match_count,
     )
+
+
+def _apply_product_lookup(cur: Any, dataframe: pd.DataFrame) -> dict[str, int]:
+    exact_values, candidates_by_product = _load_product_lookup_values(cur, dataframe)
+    produit_sks: list[int] = []
+    stats = {
+        "product_exact_formula_match_count": 0,
+        "product_unknown_formula_match_count": 0,
+        "product_controlled_product_fallback_count": 0,
+        "product_no_match_count": 0,
+    }
+
+    for row in dataframe[
+        [
+            "product_code_lookup",
+            "produit_natural_key",
+            "product_formula_missing",
+        ]
+    ].itertuples(index=False):
+        product_code = row.product_code_lookup
+        formula_key = row.produit_natural_key
+        if pd.isna(product_code) or pd.isna(formula_key):
+            produit_sks.append(0)
+            stats["product_no_match_count"] += 1
+            continue
+
+        exact_sk = exact_values.get(str(formula_key))
+        if exact_sk is not None:
+            produit_sks.append(exact_sk)
+            if bool(row.product_formula_missing):
+                stats["product_unknown_formula_match_count"] += 1
+            else:
+                stats["product_exact_formula_match_count"] += 1
+            continue
+
+        candidates = candidates_by_product.get(str(product_code), [])
+        if len(candidates) == 1:
+            produit_sks.append(candidates[0])
+            stats["product_controlled_product_fallback_count"] += 1
+            continue
+
+        produit_sks.append(0)
+        stats["product_no_match_count"] += 1
+
+    dataframe["produit_sk"] = produit_sks
+    if stats["product_no_match_count"]:
+        _print_top_missing_product_formula_pairs(dataframe)
+    return stats
+
+
+def _print_top_missing_product_formula_pairs(dataframe: pd.DataFrame) -> None:
+    missing = dataframe[dataframe["produit_sk"].eq(0)]
+    if missing.empty:
+        return
+
+    grouped = (
+        missing.groupby(["product_code_lookup", "formula_code_lookup"], dropna=False)
+        .size()
+        .reset_index(name="row_count")
+        .sort_values(
+            ["row_count", "product_code_lookup", "formula_code_lookup"],
+            ascending=[False, True, True],
+        )
+        .head(20)
+    )
+    print("top_missing_product_formula_pairs:", flush=True)
+    for row in grouped.itertuples(index=False):
+        print(
+            "  "
+            f"code_produit={row.product_code_lookup} "
+            f"code_formule={row.formula_code_lookup} "
+            f"row_count={int(row.row_count)}",
+            flush=True,
+        )
+
+
+def _load_product_lookup_values(
+    cur: Any,
+    dataframe: pd.DataFrame,
+) -> tuple[dict[str, int], dict[str, list[int]]]:
+    keys = sorted(
+        {str(key) for key in dataframe["produit_natural_key"] if pd.notna(key)}
+    )
+    product_codes = sorted(
+        {str(key) for key in dataframe["product_code_lookup"] if pd.notna(key)}
+    )
+    exact_values: dict[str, int] = {}
+    candidates_by_product: dict[str, list[int]] = {}
+    if not keys and not product_codes:
+        return exact_values, candidates_by_product
+
+    query = sql.SQL(
+        """
+        SELECT produit_sk, produit_natural_key, code_produit
+        FROM {}.{}
+        WHERE produit_natural_key = ANY(%s)
+           OR code_produit = ANY(%s)
+        """
+    ).format(sql.Identifier(TARGET_SCHEMA), sql.Identifier("dim_produit"))
+    cur.execute(query, (keys, product_codes))
+    for produit_sk, natural_key, code_produit in cur.fetchall():
+        key = normalize_product_natural_key(natural_key)
+        if key is not None and key in keys:
+            exact_values[key] = int(produit_sk)
+
+        product_code = normalize_code(code_produit)
+        if product_code is not None and int(produit_sk) != 0:
+            candidates_by_product.setdefault(product_code, []).append(int(produit_sk))
+
+    return exact_values, candidates_by_product
 
 
 def _resolve_sks(
@@ -885,6 +1055,14 @@ def _assert_lookup_tables(cur: Any) -> None:
     if missing_date_columns:
         missing = ", ".join(missing_date_columns)
         raise RuntimeError(f"{TARGET_SCHEMA}.dim_date is missing columns: {missing}")
+
+    produit_columns = _get_table_columns(cur, "dim_produit")
+    missing_produit_columns = sorted(
+        {"produit_sk", "produit_natural_key", "code_produit"} - produit_columns
+    )
+    if missing_produit_columns:
+        missing = ", ".join(missing_produit_columns)
+        raise RuntimeError(f"{TARGET_SCHEMA}.dim_produit is missing columns: {missing}")
 
 
 def _assert_fact_sinistre_contract(cur: Any, table_columns: set[str]) -> None:
