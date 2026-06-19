@@ -1,6 +1,6 @@
 # IRISv2 dim_produit Quality Validation
 
-Generated at: 2026-06-19T09:47:37
+Generated at: 2026-06-19T10:28:57
 
 This validation is read-only. It checks `iris_dw.dim_produit`, fact product links, and mart queryability without modifying data.
 

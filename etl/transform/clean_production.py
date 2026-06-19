@@ -26,6 +26,7 @@ INTEGER_COLUMNS = ("DUREE",)
 ZERO_AS_NULL_CODE_COLUMNS = (
     "CODFAM",
     "CODPROD",
+    "CODFORMU",
     "NATCLT",
     "IDCLT",
     "NATINT",

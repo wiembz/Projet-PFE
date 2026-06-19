@@ -20,7 +20,15 @@ BRONZE_METADATA_COLUMNS = (
     "ingested_at",
 )
 SINISTRE_KEY_COLUMNS = ("NUMSNT", "GRNTSINI")
-STRING_KEY_COLUMNS = ("NUMSNT", "GRNTSINI", "NUMCNT", "NUMAVT", "NUMMAJ")
+STRING_KEY_COLUMNS = (
+    "NUMSNT",
+    "GRNTSINI",
+    "NUMCNT",
+    "NUMAVT",
+    "NUMMAJ",
+    "CODPROD",
+    "CODFORMU",
+)
 REQUIRED_BUSINESS_KEY_COLUMNS = (
     "NUMSNT",
     "GRNTSINI",
@@ -32,6 +40,8 @@ REQUIRED_BUSINESS_KEY_COLUMNS = (
     "CAUSESINI",
     "NATSINI",
     "SOUNATSIN",
+    "CODFAM",
+    "CODPROD",
     "IMMAT",
 )
 DATE_COLUMNS = (
@@ -54,6 +64,9 @@ MONETARY_COLUMNS = (
     "MNTTOTNET",
 )
 ZERO_AS_NULL_CODE_COLUMNS = (
+    "CODFAM",
+    "CODPROD",
+    "CODFORMU",
     "IDDELEGA",
     "REFEXTERN",
     "INDFORCAG",
@@ -172,6 +185,8 @@ def _nullify_selected_zero_codes(dataframe: pd.DataFrame) -> None:
 
 def _keep_key_columns_as_strings(dataframe: pd.DataFrame) -> None:
     for column in STRING_KEY_COLUMNS:
+        if column not in dataframe.columns:
+            continue
         dataframe[column] = dataframe[column].astype("string")
 
 
