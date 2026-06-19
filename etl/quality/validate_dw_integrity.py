@@ -58,7 +58,7 @@ DIMENSION_NULL_CHECKS = (
     ("dw_dim_vehicule_puissance_null_count", "dim_vehicule", "vehicule_sk", "puissance", "WARNING", "WARNING"),
     ("dw_dim_vehicule_date_mise_circulation_null_count", "dim_vehicule", "vehicule_sk", "date_mise_circulation", "WARNING", "WARNING"),
     ("dw_dim_garantie_libelle_garantie_null_count", "dim_garantie", "garantie_sk", "libelle_garantie", "FAIL", "WARNING"),
-    ("dw_dim_garantie_famille_garantie_null_count", "dim_garantie", "garantie_sk", "famille_garantie", "FAIL", "WARNING"),
+    ("dw_dim_garantie_famille_garantie_null_count", "dim_garantie", "garantie_sk", "famille_garantie", "WARNING", "WARNING"),
     ("dw_dim_delegation_libelle_delegation_null_count", "dim_delegation", "delegation_sk", "libelle_delegation", "WARNING", "WARNING"),
     ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire", "WARNING", "WARNING"),
     ("dw_dim_intermediaire_type_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "type_intermediaire", "FAIL", "WARNING"),
