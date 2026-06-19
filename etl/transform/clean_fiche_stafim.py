@@ -1,15 +1,27 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from datetime import date, datetime
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
+from psycopg.types.json import Jsonb
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from etl.common.db import get_connection
+
 BRONZE_DIR = PROJECT_ROOT / "data" / "bronze"
 SILVER_DIR = PROJECT_ROOT / "data" / "silver"
+REJECT_TARGET_TABLE = "data.silver.fiche_voiture_stafim"
+REJECT_SOURCE_NAME = "fiche_voiture_stafim"
+REJECT_REASON_DUPLICATE = "duplicate_inspection_business_key"
 
 BRONZE_METADATA_COLUMNS = (
     "etl_run_id",
@@ -75,8 +87,9 @@ def clean_fiche_stafim(etl_run_id: str) -> CleanStats:
     null_key_count = int(null_key_mask.sum())
     keyed = cleaned.loc[~null_key_mask].copy()
 
-    deduplicated = _deduplicate_fiche_stafim(keyed)
+    deduplicated, duplicate_rejected = _deduplicate_fiche_stafim(keyed)
     duplicate_count = len(keyed) - len(deduplicated)
+    _write_duplicate_rejections(etl_run_id, duplicate_rejected)
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     deduplicated.to_parquet(output_file, index=False, engine="pyarrow")
@@ -223,9 +236,12 @@ def _insert_after(
     dataframe.insert(insert_at, new_column, values)
 
 
-def _deduplicate_fiche_stafim(dataframe: pd.DataFrame) -> pd.DataFrame:
+def _deduplicate_fiche_stafim(
+    dataframe: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     if dataframe.empty:
-        return dataframe.drop(columns=list(HELPER_COLUMNS & set(dataframe.columns)))
+        cleaned = dataframe.drop(columns=list(HELPER_COLUMNS & set(dataframe.columns)))
+        return cleaned, cleaned.copy()
 
     business_columns = [
         column
@@ -246,7 +262,115 @@ def _deduplicate_fiche_stafim(dataframe: pd.DataFrame) -> pd.DataFrame:
         keep="first",
     ).sort_values(by="_original_order", kind="mergesort")
 
-    return deduplicated.drop(columns=["_original_order", "_completeness_score"])
+    kept_index = set(deduplicated.index)
+    duplicate_rejected = sorted_frame.loc[
+        ~sorted_frame.index.isin(kept_index)
+    ].sort_values(by="_original_order", kind="mergesort")
+
+    helper_columns = list(HELPER_COLUMNS & set(sorted_frame.columns))
+    return (
+        deduplicated.drop(columns=helper_columns),
+        duplicate_rejected.drop(columns=helper_columns),
+    )
+
+
+def _write_duplicate_rejections(
+    etl_run_id: str,
+    duplicate_rejected: pd.DataFrame,
+) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM iris_admin.etl_rejected_record
+                WHERE etl_run_id = %(etl_run_id)s
+                  AND source_name = %(source_name)s
+                  AND target_table = %(target_table)s
+                  AND rejection_reason = %(rejection_reason)s
+                """,
+                {
+                    "etl_run_id": etl_run_id,
+                    "source_name": REJECT_SOURCE_NAME,
+                    "target_table": REJECT_TARGET_TABLE,
+                    "rejection_reason": REJECT_REASON_DUPLICATE,
+                },
+            )
+            if not duplicate_rejected.empty:
+                cur.executemany(
+                    """
+                    INSERT INTO iris_admin.etl_rejected_record (
+                        etl_run_id,
+                        source_name,
+                        source_file,
+                        source_row_number,
+                        target_table,
+                        rejection_reason,
+                        severity,
+                        raw_payload
+                    )
+                    VALUES (
+                        %(etl_run_id)s,
+                        %(source_name)s,
+                        %(source_file)s,
+                        %(source_row_number)s,
+                        %(target_table)s,
+                        %(rejection_reason)s,
+                        %(severity)s,
+                        %(raw_payload)s
+                    )
+                    """,
+                    [
+                        _duplicate_rejection_row(etl_run_id, row)
+                        for row in duplicate_rejected.to_dict(orient="records")
+                    ],
+                )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _duplicate_rejection_row(
+    etl_run_id: str,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "etl_run_id": etl_run_id,
+        "source_name": REJECT_SOURCE_NAME,
+        "source_file": _nullable_value(row.get("source_file")),
+        "source_row_number": _nullable_int(row.get("source_row_number")),
+        "target_table": REJECT_TARGET_TABLE,
+        "rejection_reason": REJECT_REASON_DUPLICATE,
+        "severity": "WARNING",
+        "raw_payload": Jsonb(
+            {key: _json_safe_value(value) for key, value in row.items()}
+        ),
+    }
+
+
+def _nullable_value(value: Any) -> Any:
+    return None if pd.isna(value) else value
+
+
+def _nullable_int(value: Any) -> int | None:
+    if pd.isna(value):
+        return None
+    return int(float(value))
+
+
+def _json_safe_value(value: Any) -> Any:
+    if pd.isna(value):
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (date, datetime, pd.Timestamp)):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        return _json_safe_value(value.item())
+    return str(value)
 
 
 def parse_iris_date(series: pd.Series) -> pd.Series:
