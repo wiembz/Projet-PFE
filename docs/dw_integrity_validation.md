@@ -1,15 +1,15 @@
 # IRISv2 DW Integrity Validation
 
-Generated at: 2026-06-19T15:15:50
+Generated at: 2026-06-19T15:29:38
 
 This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality_check`, and does not modify DW tables.
 
 ## Summary
 
-- total_checks: `56`
-- pass_count: `18`
-- warning_count: `24`
-- fail_count: `14`
+- total_checks: `60`
+- pass_count: `20`
+- warning_count: `33`
+- fail_count: `7`
 - validation_status: `FAIL`
 
 ## Foreign Key Integrity
@@ -38,13 +38,13 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 
 | check_name | schema_name | table_name | expected_value | observed_value | status |
 | --- | --- | --- | --- | --- | --- |
-| dw_dim_vehicule_marque_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_modele_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_genre_vehicule_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_usage_vehicule_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_energie_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_puissance_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
-| dw_dim_vehicule_date_mise_circulation_null_count | iris_dw | dim_vehicule | 0 | 128129 | FAIL |
+| dw_dim_vehicule_marque_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_modele_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_genre_vehicule_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_usage_vehicule_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_energie_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_puissance_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
+| dw_dim_vehicule_date_mise_circulation_null_count | iris_dw | dim_vehicule | 0 | 128129 | WARNING |
 | dw_dim_garantie_libelle_garantie_null_count | iris_dw | dim_garantie | 0 | 79 | WARNING |
 | dw_dim_garantie_famille_garantie_null_count | iris_dw | dim_garantie | 0 | 83 | FAIL |
 | dw_dim_delegation_libelle_delegation_null_count | iris_dw | dim_delegation | 0 | 5 | FAIL |
@@ -53,6 +53,10 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 | dw_dim_cause_sinistre_libelle_cause_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 0 | PASS |
 | dw_dim_cause_sinistre_libelle_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 74 | FAIL |
 | dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 60 | WARNING |
+| dw_dim_vehicule_immatriculation_null_count | iris_dw | dim_vehicule | 0 | 0 | PASS |
+| dw_dim_vehicule_vin_null_count | iris_dw | dim_vehicule | 0 | 127905 | WARNING |
+| dw_dim_vehicule_motorisation_null_count | iris_dw | dim_vehicule | 0 | 127905 | WARNING |
+| dw_dim_vehicule_source_system_null_count | iris_dw | dim_vehicule | 0 | 0 | PASS |
 
 ## Fact Anomalies
 

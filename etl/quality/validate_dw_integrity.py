@@ -50,21 +50,30 @@ FK_CHECKS = (
 )
 
 DIMENSION_NULL_CHECKS = (
-    ("dw_dim_vehicule_marque_null_count", "dim_vehicule", "vehicule_sk", "marque"),
-    ("dw_dim_vehicule_modele_null_count", "dim_vehicule", "vehicule_sk", "modele"),
-    ("dw_dim_vehicule_genre_vehicule_null_count", "dim_vehicule", "vehicule_sk", "genre_vehicule"),
-    ("dw_dim_vehicule_usage_vehicule_null_count", "dim_vehicule", "vehicule_sk", "usage_vehicule"),
-    ("dw_dim_vehicule_energie_null_count", "dim_vehicule", "vehicule_sk", "energie"),
-    ("dw_dim_vehicule_puissance_null_count", "dim_vehicule", "vehicule_sk", "puissance"),
-    ("dw_dim_vehicule_date_mise_circulation_null_count", "dim_vehicule", "vehicule_sk", "date_mise_circulation"),
-    ("dw_dim_garantie_libelle_garantie_null_count", "dim_garantie", "garantie_sk", "libelle_garantie"),
-    ("dw_dim_garantie_famille_garantie_null_count", "dim_garantie", "garantie_sk", "famille_garantie"),
-    ("dw_dim_delegation_libelle_delegation_null_count", "dim_delegation", "delegation_sk", "libelle_delegation"),
-    ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire"),
-    ("dw_dim_intermediaire_type_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "type_intermediaire"),
-    ("dw_dim_cause_sinistre_libelle_cause_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_cause_sinistre"),
-    ("dw_dim_cause_sinistre_libelle_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_nature_sinistre"),
-    ("dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_sous_nature_sinistre"),
+    ("dw_dim_vehicule_marque_null_count", "dim_vehicule", "vehicule_sk", "marque", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_modele_null_count", "dim_vehicule", "vehicule_sk", "modele", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_genre_vehicule_null_count", "dim_vehicule", "vehicule_sk", "genre_vehicule", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_usage_vehicule_null_count", "dim_vehicule", "vehicule_sk", "usage_vehicule", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_energie_null_count", "dim_vehicule", "vehicule_sk", "energie", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_puissance_null_count", "dim_vehicule", "vehicule_sk", "puissance", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_date_mise_circulation_null_count", "dim_vehicule", "vehicule_sk", "date_mise_circulation", "WARNING", "WARNING"),
+    ("dw_dim_garantie_libelle_garantie_null_count", "dim_garantie", "garantie_sk", "libelle_garantie", "FAIL", "WARNING"),
+    ("dw_dim_garantie_famille_garantie_null_count", "dim_garantie", "garantie_sk", "famille_garantie", "FAIL", "WARNING"),
+    ("dw_dim_delegation_libelle_delegation_null_count", "dim_delegation", "delegation_sk", "libelle_delegation", "FAIL", "WARNING"),
+    ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire", "FAIL", "WARNING"),
+    ("dw_dim_intermediaire_type_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "type_intermediaire", "FAIL", "WARNING"),
+    ("dw_dim_cause_sinistre_libelle_cause_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_cause_sinistre", "FAIL", "WARNING"),
+    ("dw_dim_cause_sinistre_libelle_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_nature_sinistre", "FAIL", "WARNING"),
+    ("dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_sous_nature_sinistre", "FAIL", "WARNING"),
+)
+
+OPTIONAL_DIMENSION_NULL_CHECKS = (
+    ("dw_dim_vehicule_immatriculation_null_count", "dim_vehicule", "vehicule_sk", "immatriculation", "FAIL", "FAIL"),
+    ("dw_dim_vehicule_vin_null_count", "dim_vehicule", "vehicule_sk", "vin", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_motorisation_null_count", "dim_vehicule", "vehicule_sk", "motorisation", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_kilometrage_null_count", "dim_vehicule", "vehicule_sk", "kilometrage", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_numero_risque_null_count", "dim_vehicule", "vehicule_sk", "numero_risque", "WARNING", "WARNING"),
+    ("dw_dim_vehicule_source_system_null_count", "dim_vehicule", "vehicule_sk", "source_system", "FAIL", "FAIL"),
 )
 
 KIMBALL_COLUMN_CHECKS = (
@@ -165,7 +174,20 @@ def _fk_orphan_count(
 
 def _dimension_null_checks(cur: Any) -> list[QualityCheck]:
     checks: list[QualityCheck] = []
-    for check_name, table_name, sk_column, checked_column in DIMENSION_NULL_CHECKS:
+    check_definitions = (*DIMENSION_NULL_CHECKS, *OPTIONAL_DIMENSION_NULL_CHECKS)
+    table_columns: dict[str, set[str]] = {}
+    for (
+        check_name,
+        table_name,
+        sk_column,
+        checked_column,
+        all_null_status,
+        partial_null_status,
+    ) in check_definitions:
+        if table_name not in table_columns:
+            table_columns[table_name] = _table_columns(cur, "iris_dw", table_name)
+        if checked_column not in table_columns[table_name]:
+            continue
         row_count, null_count = _dimension_null_count(
             cur,
             table_name=table_name,
@@ -179,7 +201,12 @@ def _dimension_null_checks(cur: Any) -> list[QualityCheck]:
                 table_name=table_name,
                 expected_value="0",
                 observed_value=str(null_count),
-                status=_dimension_null_status(row_count, null_count),
+                status=_dimension_null_status(
+                    row_count,
+                    null_count,
+                    all_null_status=all_null_status,
+                    partial_null_status=partial_null_status,
+                ),
                 section="Dimension Completeness",
             )
         )
@@ -209,12 +236,18 @@ def _dimension_null_count(
     return int(row_count or 0), int(null_count or 0)
 
 
-def _dimension_null_status(row_count: int, null_count: int) -> str:
+def _dimension_null_status(
+    row_count: int,
+    null_count: int,
+    *,
+    all_null_status: str,
+    partial_null_status: str,
+) -> str:
     if null_count == 0:
         return "PASS"
     if row_count > 0 and null_count == row_count:
-        return "FAIL"
-    return "WARNING"
+        return all_null_status
+    return partial_null_status
 
 
 def _fact_anomaly_checks(cur: Any) -> list[QualityCheck]:
