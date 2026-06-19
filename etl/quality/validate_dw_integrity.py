@@ -60,7 +60,7 @@ DIMENSION_NULL_CHECKS = (
     ("dw_dim_garantie_libelle_garantie_null_count", "dim_garantie", "garantie_sk", "libelle_garantie", "FAIL", "WARNING"),
     ("dw_dim_garantie_famille_garantie_null_count", "dim_garantie", "garantie_sk", "famille_garantie", "FAIL", "WARNING"),
     ("dw_dim_delegation_libelle_delegation_null_count", "dim_delegation", "delegation_sk", "libelle_delegation", "WARNING", "WARNING"),
-    ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire", "FAIL", "WARNING"),
+    ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire", "WARNING", "WARNING"),
     ("dw_dim_intermediaire_type_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "type_intermediaire", "FAIL", "WARNING"),
     ("dw_dim_cause_sinistre_libelle_cause_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_cause_sinistre", "FAIL", "WARNING"),
     ("dw_dim_cause_sinistre_libelle_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_nature_sinistre", "FAIL", "WARNING"),

@@ -29,6 +29,11 @@ TARGET_KEY_CANDIDATES = (
 )
 NEVER_INSERT_COLUMNS = {"intermediaire_sk", "created_at", "updated_at"}
 NULL_MARKERS = {"", "nan", "none", "<na>"}
+INTERMEDIAIRE_TYPE_LABELS = {
+    "AG": "Agent",
+    "CL": "Client",
+    "*G": "Inconnu",
+}
 INPUT_FILES = (
     ("production", "production.parquet"),
     ("sinistres", "sinistres.parquet"),
@@ -38,6 +43,7 @@ SOURCE_TO_TARGET_CANDIDATES = {
     SOURCE_NATURAL_KEY: TARGET_KEY_CANDIDATES,
     "NATINT": ("nature_intermediaire", "code_nature_intermediaire", "natint"),
     "IDINT": ("code_intermediaire", "id_intermediaire", "idint"),
+    "type_intermediaire": ("type_intermediaire",),
     "source_system": ("source_system",),
 }
 
@@ -149,6 +155,9 @@ def _build_distinct_intermediaire_rows(
         + "|"
         + intermediaires["IDINT"].astype("string")
     )
+    intermediaires["type_intermediaire"] = intermediaires["NATINT"].map(
+        _intermediaire_type_label
+    )
     intermediaires["source_system"] = SOURCE_SYSTEM_VALUE
 
     distinct = (
@@ -158,6 +167,13 @@ def _build_distinct_intermediaire_rows(
     )
 
     return distinct, null_key_count
+
+
+def _intermediaire_type_label(code_nature_intermediaire: object) -> str:
+    if pd.isna(code_nature_intermediaire):
+        return "Inconnu"
+    code = str(code_nature_intermediaire).strip().upper()
+    return INTERMEDIAIRE_TYPE_LABELS.get(code, "Inconnu")
 
 
 def _get_table_columns(cur: Any) -> set[str]:

@@ -1,15 +1,15 @@
 # IRISv2 DW Integrity Validation
 
-Generated at: 2026-06-19T15:37:07
+Generated at: 2026-06-19T15:51:35
 
 This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality_check`, and does not modify DW tables.
 
 ## Summary
 
 - total_checks: `60`
-- pass_count: `20`
-- warning_count: `34`
-- fail_count: `6`
+- pass_count: `21`
+- warning_count: `35`
+- fail_count: `4`
 - validation_status: `FAIL`
 
 ## Foreign Key Integrity
@@ -48,8 +48,8 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 | dw_dim_garantie_libelle_garantie_null_count | iris_dw | dim_garantie | 0 | 79 | WARNING |
 | dw_dim_garantie_famille_garantie_null_count | iris_dw | dim_garantie | 0 | 83 | FAIL |
 | dw_dim_delegation_libelle_delegation_null_count | iris_dw | dim_delegation | 0 | 5 | WARNING |
-| dw_dim_intermediaire_nom_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 212 | FAIL |
-| dw_dim_intermediaire_type_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 212 | FAIL |
+| dw_dim_intermediaire_nom_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 212 | WARNING |
+| dw_dim_intermediaire_type_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 0 | PASS |
 | dw_dim_cause_sinistre_libelle_cause_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 0 | PASS |
 | dw_dim_cause_sinistre_libelle_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 74 | FAIL |
 | dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 60 | WARNING |
