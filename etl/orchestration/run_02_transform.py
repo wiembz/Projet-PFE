@@ -8,6 +8,11 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from etl.common.step_logging import fail_step_run, finish_step_run, start_step_run
+
 BRONZE_DIR = PROJECT_ROOT / "data" / "bronze"
 SILVER_DIR = PROJECT_ROOT / "data" / "silver"
 TRANSFORM_DIR = PROJECT_ROOT / "etl" / "transform"
@@ -55,7 +60,21 @@ def run_silver_transforms(etl_run_id: str) -> list[Path]:
     total_steps = len(TRANSFORMS)
     for index, transform in enumerate(TRANSFORMS, start=1):
         print(f"[{index}/{total_steps}] Silver {transform.label}", flush=True)
-        _run_transform_script(transform, etl_run_id)
+        script_path = TRANSFORM_DIR / transform.script_name
+        relative_script = str(script_path.relative_to(PROJECT_ROOT))
+        step_run_id = start_step_run(
+            etl_run_id,
+            f"Silver {transform.label}",
+            step_order=index,
+            script_path=relative_script,
+        )
+        try:
+            _run_transform_script(transform, etl_run_id)
+        except Exception as exc:
+            fail_step_run(step_run_id, exc)
+            raise
+        else:
+            finish_step_run(step_run_id, status="SUCCESS")
 
     output_files = _expected_output_files(etl_run_id)
     _assert_output_files_exist(output_files)
