@@ -23,6 +23,12 @@ TARGET_TABLE = "dim_garantie"
 SOURCE_NATURAL_KEY = "garantie_natural_key"
 SOURCE_COLUMN = "GRNTSINI"
 SOURCE_SYSTEM_VALUE = "Sinistres.xlsx"
+GOVERNED_GARANTIE_LABELS = {
+    "REM": "Remorquage",
+    "DEPC": "Dépannage conducteur",
+    "EXT": "Extension territoriale",
+    "DEPA": "Dépannage",
+}
 TARGET_KEY_CANDIDATES = (
     "garantie_natural_key",
     "garantie_business_key",
@@ -33,6 +39,7 @@ NULL_MARKERS = {"", "nan", "none", "<na>"}
 SOURCE_TO_TARGET_CANDIDATES = {
     SOURCE_NATURAL_KEY: TARGET_KEY_CANDIDATES,
     SOURCE_COLUMN: ("code_garantie", "code_garantie_sinistre", "grntsini"),
+    "LIBGRNSIN": ("libelle_garantie",),
     "source_system": ("source_system",),
 }
 
@@ -119,6 +126,7 @@ def _build_distinct_garantie_rows(dataframe: pd.DataFrame) -> tuple[pd.DataFrame
     garanties = garanties.loc[garanties[SOURCE_COLUMN].notna()].copy()
 
     garanties[SOURCE_NATURAL_KEY] = garanties[SOURCE_COLUMN]
+    garanties["LIBGRNSIN"] = garanties[SOURCE_COLUMN].map(GOVERNED_GARANTIE_LABELS)
     garanties["source_system"] = SOURCE_SYSTEM_VALUE
 
     distinct = (
