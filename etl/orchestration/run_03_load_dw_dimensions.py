@@ -8,6 +8,10 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from etl.common.step_logging import fail_step_run, finish_step_run, start_step_run
 
 
 @dataclass(frozen=True)
@@ -31,13 +35,27 @@ def run_dw_dimension_loads(etl_run_id: str) -> int:
 
     for index, step in enumerate(steps, start=1):
         print(_step_banner(index, total_steps, step), flush=True)
-        return_code = _run_step(step, etl_run_id)
-        if return_code != 0:
+        relative_script = str(step.script_path.relative_to(PROJECT_ROOT))
+        step_run_id = start_step_run(
+            etl_run_id,
+            step.label,
+            step_order=index,
+            script_path=relative_script,
+        )
+        try:
+            _run_step(step, etl_run_id)
+        except subprocess.CalledProcessError as exc:
+            fail_step_run(step_run_id, exc)
             print(
-                f"[FAILED] {step.label} exited with return code {return_code}",
+                f"[FAILED] {step.label} exited with return code {exc.returncode}",
                 flush=True,
             )
-            return return_code
+            raise
+        except Exception as exc:
+            fail_step_run(step_run_id, exc)
+            raise
+        else:
+            finish_step_run(step_run_id, status="SUCCESS")
 
     print("DW dimensions orchestration completed successfully.", flush=True)
     return 0
@@ -115,7 +133,7 @@ def _run_step(step: DimensionLoadStep, etl_run_id: str) -> int:
     if step.needs_etl_run_id:
         command.extend(("--etl-run-id", etl_run_id))
 
-    completed = subprocess.run(command, cwd=PROJECT_ROOT)
+    completed = subprocess.run(command, cwd=PROJECT_ROOT, check=True)
     return int(completed.returncode)
 
 
