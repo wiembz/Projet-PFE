@@ -1,6 +1,6 @@
 # IRISv2 DW Integrity Validation
 
-Generated at: 2026-06-19T15:58:36
+Generated at: 2026-06-19T16:04:28
 
 This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality_check`, and does not modify DW tables.
 
@@ -8,8 +8,8 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 
 - total_checks: `60`
 - pass_count: `21`
-- warning_count: `36`
-- fail_count: `3`
+- warning_count: `37`
+- fail_count: `2`
 - validation_status: `FAIL`
 
 ## Foreign Key Integrity
@@ -51,7 +51,7 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 | dw_dim_intermediaire_nom_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 212 | WARNING |
 | dw_dim_intermediaire_type_intermediaire_null_count | iris_dw | dim_intermediaire | 0 | 0 | PASS |
 | dw_dim_cause_sinistre_libelle_cause_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 0 | PASS |
-| dw_dim_cause_sinistre_libelle_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 74 | FAIL |
+| dw_dim_cause_sinistre_libelle_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 74 | WARNING |
 | dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count | iris_dw | dim_cause_sinistre | 0 | 60 | WARNING |
 | dw_dim_vehicule_immatriculation_null_count | iris_dw | dim_vehicule | 0 | 0 | PASS |
 | dw_dim_vehicule_vin_null_count | iris_dw | dim_vehicule | 0 | 127905 | WARNING |

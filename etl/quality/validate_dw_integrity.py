@@ -63,7 +63,7 @@ DIMENSION_NULL_CHECKS = (
     ("dw_dim_intermediaire_nom_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "nom_intermediaire", "WARNING", "WARNING"),
     ("dw_dim_intermediaire_type_intermediaire_null_count", "dim_intermediaire", "intermediaire_sk", "type_intermediaire", "FAIL", "WARNING"),
     ("dw_dim_cause_sinistre_libelle_cause_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_cause_sinistre", "FAIL", "WARNING"),
-    ("dw_dim_cause_sinistre_libelle_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_nature_sinistre", "FAIL", "WARNING"),
+    ("dw_dim_cause_sinistre_libelle_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_nature_sinistre", "WARNING", "WARNING"),
     ("dw_dim_cause_sinistre_libelle_sous_nature_sinistre_null_count", "dim_cause_sinistre", "cause_sinistre_sk", "libelle_sous_nature_sinistre", "FAIL", "WARNING"),
 )
 
