@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from etl.common.db import get_connection
+from etl.common.normalization import normalize_code, normalize_formula_code
 
 
 REPORT_PATH = PROJECT_ROOT / "docs" / "dim_produit_quality_validation.md"
@@ -125,8 +126,8 @@ def _load_auto_reference_pairs(warnings: list[str]) -> set[tuple[str, str]]:
     if not required.issubset(frame.columns):
         warnings.append("fichierStagiaire CODPROD sheet lacks CODPROD/CODFORMU.")
         return set()
-    frame["CODPROD"] = frame["CODPROD"].map(_clean_code)
-    frame["CODFORMU"] = frame["CODFORMU"].map(_clean_code)
+    frame["CODPROD"] = frame["CODPROD"].map(normalize_code)
+    frame["CODFORMU"] = frame["CODFORMU"].map(normalize_formula_code)
     frame = frame[
         frame["CODPROD"].fillna("").str.startswith(AUTO_PRODUCT_PREFIX, na=False)
         & frame["CODFORMU"].notna()
@@ -361,17 +362,6 @@ def _rows_to_markdown(rows: list[dict[str, Any]], columns: list[str]) -> list[st
     for row in rows:
         lines.append("| " + " | ".join(str(row.get(column, "")) for column in columns) + " |")
     return lines
-
-
-def _clean_code(value: Any) -> str | None:
-    if value is None or pd.isna(value):
-        return None
-    text = str(value).strip()
-    if not text or text.casefold() in {"nan", "none", "<na>", "null"}:
-        return None
-    if text.endswith(".0") and text[:-2].isdigit():
-        text = text[:-2]
-    return text
 
 
 def _resolve_project_path(value: str | Path) -> Path:
