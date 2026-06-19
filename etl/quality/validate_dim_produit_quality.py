@@ -20,6 +20,18 @@ from etl.common.normalization import normalize_code, normalize_formula_code
 REPORT_PATH = PROJECT_ROOT / "docs" / "dim_produit_quality_validation.md"
 REFERENCE_FILE = PROJECT_ROOT / "data" / "reference" / "fichierStagiaire.xlsx"
 AUTO_PRODUCT_PREFIX = "5"
+DATA_QUALITY_CHECK_NAMES = (
+    "dim_produit_duplicate_product_formula_count",
+    "dim_produit_natural_key_mismatch_count",
+    "dim_produit_real_row_null_code_formule_count",
+    "dim_produit_missing_libelle_formule_count",
+    "dim_produit_missing_libelle_famille_count",
+    "dim_produit_reference_auto_product_formula_missing_count",
+    "fact_prime_unknown_produit_count",
+    "fact_sinistre_unknown_produit_count",
+    "iris_mart_invalid_view_count",
+    "dim_produit_validation_status",
+)
 
 
 def main() -> None:
@@ -32,6 +44,7 @@ def main() -> None:
     report_path.write_text(markdown, encoding="utf-8")
     print(f"\n[OK] Markdown validation written to {report_path}")
     print(f"validation_status={results['validation_status']}")
+    _write_data_quality_checks(args.etl_run_id, results)
 
 
 def validate_dim_produit_quality() -> dict[str, Any]:
@@ -292,6 +305,210 @@ def _mart_metrics(cur: Any) -> dict[str, int]:
     }
 
 
+def _write_data_quality_checks(
+    etl_run_id: str | None,
+    results: dict[str, Any],
+) -> None:
+    rows = _data_quality_check_rows(etl_run_id, results)
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            check_name_placeholders = ", ".join(
+                "%s" for _ in DATA_QUALITY_CHECK_NAMES
+            )
+            if etl_run_id is None:
+                cur.execute(
+                    f"""
+                    DELETE FROM iris_admin.data_quality_check
+                    WHERE etl_run_id IS NULL
+                      AND check_name IN ({check_name_placeholders})
+                    """,
+                    DATA_QUALITY_CHECK_NAMES,
+                )
+            else:
+                cur.execute(
+                    f"""
+                    DELETE FROM iris_admin.data_quality_check
+                    WHERE etl_run_id = %s
+                      AND check_name IN ({check_name_placeholders})
+                    """,
+                    (etl_run_id, *DATA_QUALITY_CHECK_NAMES),
+                )
+            cur.executemany(
+                """
+                INSERT INTO iris_admin.data_quality_check (
+                    etl_run_id,
+                    check_name,
+                    schema_name,
+                    table_name,
+                    expected_value,
+                    observed_value,
+                    status,
+                    checked_at
+                )
+                VALUES (
+                    %(etl_run_id)s,
+                    %(check_name)s,
+                    %(schema_name)s,
+                    %(table_name)s,
+                    %(expected_value)s,
+                    %(observed_value)s,
+                    %(status)s,
+                    now()
+                )
+                """,
+                rows,
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _data_quality_check_rows(
+    etl_run_id: str | None,
+    results: dict[str, Any],
+) -> list[dict[str, str | None]]:
+    metrics = results["metrics"]
+    fact_metrics = results["fact_metrics"]
+    mart_metrics = results["mart_metrics"]
+    reference_missing_count = len(results["reference_gap_rows"])
+    validation_status = results["validation_status"]
+
+    return [
+        _check_row(
+            etl_run_id,
+            "dim_produit_duplicate_product_formula_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            metrics.get("duplicate_product_formula_count", 0),
+            _zero_status(metrics.get("duplicate_product_formula_count", 0), "FAIL"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_natural_key_mismatch_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            metrics.get("natural_key_mismatch_count", 0),
+            _zero_status(metrics.get("natural_key_mismatch_count", 0), "FAIL"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_real_row_null_code_formule_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            metrics.get("real_row_null_code_formule_count", 0),
+            _zero_status(metrics.get("real_row_null_code_formule_count", 0), "FAIL"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_missing_libelle_formule_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            metrics.get("missing_libelle_formule_count", 0),
+            _zero_status(metrics.get("missing_libelle_formule_count", 0), "WARNING"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_missing_libelle_famille_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            metrics.get("missing_libelle_famille_count", 0),
+            _zero_status(metrics.get("missing_libelle_famille_count", 0), "WARNING"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_reference_auto_product_formula_missing_count",
+            "iris_dw",
+            "dim_produit",
+            "0",
+            reference_missing_count,
+            _zero_status(reference_missing_count, "WARNING"),
+        ),
+        _check_row(
+            etl_run_id,
+            "fact_prime_unknown_produit_count",
+            "iris_dw",
+            "fact_prime",
+            "0",
+            fact_metrics.get("fact_prime_unknown_produit_count", 0),
+            _zero_status(
+                fact_metrics.get("fact_prime_unknown_produit_count", 0),
+                "WARNING",
+            ),
+        ),
+        _check_row(
+            etl_run_id,
+            "fact_sinistre_unknown_produit_count",
+            "iris_dw",
+            "fact_sinistre",
+            "0",
+            fact_metrics.get("fact_sinistre_unknown_produit_count", 0),
+            _zero_status(
+                fact_metrics.get("fact_sinistre_unknown_produit_count", 0),
+                "WARNING",
+            ),
+        ),
+        _check_row(
+            etl_run_id,
+            "iris_mart_invalid_view_count",
+            "iris_mart",
+            "*",
+            "0",
+            mart_metrics.get("invalid_view_count", 0),
+            _zero_status(mart_metrics.get("invalid_view_count", 0), "FAIL"),
+        ),
+        _check_row(
+            etl_run_id,
+            "dim_produit_validation_status",
+            "iris_dw",
+            "dim_produit",
+            "OK",
+            validation_status,
+            validation_status,
+        ),
+    ]
+
+
+def _check_row(
+    etl_run_id: str | None,
+    check_name: str,
+    schema_name: str,
+    table_name: str,
+    expected_value: str,
+    observed_value: Any,
+    status: str,
+) -> dict[str, str | None]:
+    return {
+        "etl_run_id": etl_run_id,
+        "check_name": check_name,
+        "schema_name": schema_name,
+        "table_name": table_name,
+        "expected_value": expected_value,
+        "observed_value": str(observed_value),
+        "status": _data_quality_status(status),
+    }
+
+
+def _data_quality_status(status: str) -> str:
+    if status == "OK":
+        return "PASS"
+    if status in {"WARNING", "FAIL"}:
+        return status
+    raise ValueError(f"Unsupported data quality status: {status}")
+
+
+def _zero_status(observed_value: Any, non_zero_status: str) -> str:
+    return "OK" if int(observed_value or 0) == 0 else non_zero_status
+
+
 def _build_console(results: dict[str, Any]) -> str:
     lines = [
         "IRISv2 dim_produit Quality Validation",
@@ -379,6 +596,11 @@ def _parse_args() -> argparse.Namespace:
         "--report-path",
         default=str(REPORT_PATH),
         help="Markdown report path.",
+    )
+    parser.add_argument(
+        "--etl-run-id",
+        default=None,
+        help="Optional ETL run id used when persisting data quality checks.",
     )
     return parser.parse_args()
 
