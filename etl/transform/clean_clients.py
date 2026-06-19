@@ -1,15 +1,27 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from datetime import date, datetime
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
+from psycopg.types.json import Jsonb
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from etl.common.db import get_connection
+
 BRONZE_DIR = PROJECT_ROOT / "data" / "bronze"
 SILVER_DIR = PROJECT_ROOT / "data" / "silver"
+REJECT_TARGET_TABLE = "data.silver.clients"
+REJECT_SOURCE_NAME = "clients"
+REJECT_REASON_INVALID_NBRENF = "invalid_nombre_enfants_normalized_to_null"
 
 BRONZE_METADATA_COLUMNS = (
     "etl_run_id",
@@ -126,7 +138,10 @@ def clean_clients(etl_run_id: str) -> CleanStats:
     input_count = len(dataframe)
 
     _assert_required_columns(dataframe)
-    cleaned, quality_stats = _clean_client_dataframe(dataframe)
+    cleaned, quality_stats, invalid_nombre_enfants_rows = _clean_client_dataframe(
+        dataframe
+    )
+    _write_invalid_nombre_enfants_rejections(etl_run_id, invalid_nombre_enfants_rows)
 
     null_key_mask = cleaned["client_business_key"].isna()
     null_key_count = int(null_key_mask.sum())
@@ -148,7 +163,9 @@ def clean_clients(etl_run_id: str) -> CleanStats:
     )
 
 
-def _clean_client_dataframe(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, QualityStats]:
+def _clean_client_dataframe(
+    dataframe: pd.DataFrame,
+) -> tuple[pd.DataFrame, QualityStats, pd.DataFrame]:
     cleaned = dataframe.copy()
     cleaned["_original_order"] = range(len(cleaned))
 
@@ -156,10 +173,10 @@ def _clean_client_dataframe(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, Qual
     _nullify_business_markers(cleaned)
     _keep_key_columns_as_strings(cleaned)
     _convert_date_columns(cleaned)
-    quality_stats = _normalize_domain_columns(cleaned)
+    quality_stats, invalid_nombre_enfants_rows = _normalize_domain_columns(cleaned)
     _add_client_business_key(cleaned)
 
-    return cleaned, quality_stats
+    return cleaned, quality_stats, invalid_nombre_enfants_rows
 
 
 def _strip_text_columns(dataframe: pd.DataFrame) -> None:
@@ -191,7 +208,9 @@ def _convert_date_columns(dataframe: pd.DataFrame) -> None:
             dataframe[column] = parse_iris_date(dataframe[column])
 
 
-def _normalize_domain_columns(dataframe: pd.DataFrame) -> QualityStats:
+def _normalize_domain_columns(
+    dataframe: pd.DataFrame,
+) -> tuple[QualityStats, pd.DataFrame]:
     sexe_null_count_before = _count_nullish(dataframe, "SEXE")
     situation_familiale_x_count_before = _count_upper_value(
         dataframe, "SITUAFAMI", "X"
@@ -200,6 +219,7 @@ def _normalize_domain_columns(dataframe: pd.DataFrame) -> QualityStats:
     nombre_enfants_null_count_before = _count_nullish(dataframe, "NBRENF")
     geo_null_gouvernorat_before = _count_nullish(dataframe, "GOUVERNOR")
     nombre_enfants_invalid_count = 0
+    invalid_nombre_enfants_rows = dataframe.iloc[0:0].copy()
 
     if "SEXE" in dataframe.columns:
         dataframe["SEXE"] = normalize_sexe(dataframe["SEXE"])
@@ -208,6 +228,7 @@ def _normalize_domain_columns(dataframe: pd.DataFrame) -> QualityStats:
             dataframe["SITUAFAMI"]
         )
     if "NBRENF" in dataframe.columns:
+        invalid_nombre_enfants_rows = _invalid_nombre_enfants_rows(dataframe)
         dataframe["NBRENF"], nombre_enfants_invalid_count = (
             normalize_nombre_enfants(dataframe["NBRENF"])
         )
@@ -218,24 +239,27 @@ def _normalize_domain_columns(dataframe: pd.DataFrame) -> QualityStats:
         dataframe
     )
 
-    return QualityStats(
-        sexe_null_count_before=sexe_null_count_before,
-        sexe_null_count_after=_count_nullish(dataframe, "SEXE"),
-        situation_familiale_x_count_before=situation_familiale_x_count_before,
-        situation_familiale_x_count_after=_count_upper_value(
-            dataframe, "SITUAFAMI", "X"
+    return (
+        QualityStats(
+            sexe_null_count_before=sexe_null_count_before,
+            sexe_null_count_after=_count_nullish(dataframe, "SEXE"),
+            situation_familiale_x_count_before=situation_familiale_x_count_before,
+            situation_familiale_x_count_after=_count_upper_value(
+                dataframe, "SITUAFAMI", "X"
+            ),
+            situation_familiale_null_count_before=situation_familiale_null_count_before,
+            situation_familiale_null_count_after=_count_nullish(
+                dataframe, "SITUAFAMI"
+            ),
+            nombre_enfants_invalid_count=nombre_enfants_invalid_count,
+            nombre_enfants_null_count_before=nombre_enfants_null_count_before,
+            nombre_enfants_null_count_after=_count_nullish(dataframe, "NBRENF"),
+            moral_type_identifier_count=moral_type_identifier_count,
+            geo_null_gouvernorat_before=geo_null_gouvernorat_before,
+            geo_null_gouvernorat_after=_count_nullish(dataframe, "GOUVERNOR"),
+            geo_gouvernorat_filled_count=geo_gouvernorat_filled_count,
         ),
-        situation_familiale_null_count_before=situation_familiale_null_count_before,
-        situation_familiale_null_count_after=_count_nullish(
-            dataframe, "SITUAFAMI"
-        ),
-        nombre_enfants_invalid_count=nombre_enfants_invalid_count,
-        nombre_enfants_null_count_before=nombre_enfants_null_count_before,
-        nombre_enfants_null_count_after=_count_nullish(dataframe, "NBRENF"),
-        moral_type_identifier_count=moral_type_identifier_count,
-        geo_null_gouvernorat_before=geo_null_gouvernorat_before,
-        geo_null_gouvernorat_after=_count_nullish(dataframe, "GOUVERNOR"),
-        geo_gouvernorat_filled_count=geo_gouvernorat_filled_count,
+        invalid_nombre_enfants_rows,
     )
 
 
@@ -276,6 +300,105 @@ def _deduplicate_clients(dataframe: pd.DataFrame) -> pd.DataFrame:
     ).sort_values(by="_original_order", kind="mergesort")
 
     return deduplicated.drop(columns=["_original_order", "_completeness_score"])
+
+
+def _write_invalid_nombre_enfants_rejections(
+    etl_run_id: str,
+    invalid_rows: pd.DataFrame,
+) -> None:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM iris_admin.etl_rejected_record
+                WHERE etl_run_id = %(etl_run_id)s
+                  AND source_name = %(source_name)s
+                  AND target_table = %(target_table)s
+                  AND rejection_reason = %(rejection_reason)s
+                """,
+                {
+                    "etl_run_id": etl_run_id,
+                    "source_name": REJECT_SOURCE_NAME,
+                    "target_table": REJECT_TARGET_TABLE,
+                    "rejection_reason": REJECT_REASON_INVALID_NBRENF,
+                },
+            )
+            if not invalid_rows.empty:
+                cur.executemany(
+                    """
+                    INSERT INTO iris_admin.etl_rejected_record (
+                        etl_run_id,
+                        source_name,
+                        source_file,
+                        source_row_number,
+                        target_table,
+                        rejection_reason,
+                        severity,
+                        raw_payload
+                    )
+                    VALUES (
+                        %(etl_run_id)s,
+                        %(source_name)s,
+                        %(source_file)s,
+                        %(source_row_number)s,
+                        %(target_table)s,
+                        %(rejection_reason)s,
+                        %(severity)s,
+                        %(raw_payload)s
+                    )
+                    """,
+                    [
+                        _invalid_nombre_enfants_rejection_row(etl_run_id, row)
+                        for row in invalid_rows.to_dict(orient="records")
+                    ],
+                )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _invalid_nombre_enfants_rejection_row(
+    etl_run_id: str,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "etl_run_id": etl_run_id,
+        "source_name": REJECT_SOURCE_NAME,
+        "source_file": _nullable_value(row.get("source_file")),
+        "source_row_number": _nullable_int(row.get("source_row_number")),
+        "target_table": REJECT_TARGET_TABLE,
+        "rejection_reason": REJECT_REASON_INVALID_NBRENF,
+        "severity": "WARNING",
+        "raw_payload": Jsonb(
+            {key: _json_safe_value(value) for key, value in row.items()}
+        ),
+    }
+
+
+def _nullable_value(value: Any) -> Any:
+    return None if pd.isna(value) else value
+
+
+def _nullable_int(value: Any) -> int | None:
+    if pd.isna(value):
+        return None
+    return int(float(value))
+
+
+def _json_safe_value(value: Any) -> Any:
+    if pd.isna(value):
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (date, datetime, pd.Timestamp)):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        return _json_safe_value(value.item())
+    return str(value)
 
 
 def parse_iris_date(series: pd.Series) -> pd.Series:
@@ -355,6 +478,28 @@ def normalize_situation_familiale(series: pd.Series) -> pd.Series:
 
 
 def normalize_nombre_enfants(series: pd.Series) -> tuple[pd.Series, int]:
+    missing_mask, valid_mask, numeric = _nombre_enfants_quality_masks(series)
+    invalid_count = int((~missing_mask & ~valid_mask).sum())
+
+    result = pd.Series(pd.NA, index=series.index, dtype="Int64")
+    if bool(valid_mask.any()):
+        result.loc[valid_mask] = numeric.loc[valid_mask].astype("int64")
+    return result, invalid_count
+
+
+def _invalid_nombre_enfants_rows(dataframe: pd.DataFrame) -> pd.DataFrame:
+    if "NBRENF" not in dataframe.columns:
+        return dataframe.iloc[0:0].copy()
+    missing_mask, valid_mask, _ = _nombre_enfants_quality_masks(dataframe["NBRENF"])
+    invalid_mask = ~missing_mask & ~valid_mask
+    return dataframe.loc[invalid_mask].drop(
+        columns=list(HELPER_COLUMNS & set(dataframe.columns))
+    )
+
+
+def _nombre_enfants_quality_masks(
+    series: pd.Series,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     s = series.astype("string").str.strip()
     missing_mask = _quality_null_mask(s)
     normalized = s.mask(missing_mask, pd.NA)
@@ -367,12 +512,7 @@ def normalize_nombre_enfants(series: pd.Series) -> tuple[pd.Series, int]:
     numeric = pd.to_numeric(normalized, errors="coerce")
     whole_number_mask = numeric.notna() & numeric.mod(1).eq(0)
     valid_mask = whole_number_mask & numeric.between(0, 20)
-    invalid_count = int((~missing_mask & ~valid_mask).sum())
-
-    result = pd.Series(pd.NA, index=series.index, dtype="Int64")
-    if bool(valid_mask.any()):
-        result.loc[valid_mask] = numeric.loc[valid_mask].astype("int64")
-    return result, invalid_count
+    return missing_mask, valid_mask, numeric
 
 
 def _apply_moral_profile_corrections(dataframe: pd.DataFrame) -> int:
