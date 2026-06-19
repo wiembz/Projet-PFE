@@ -1,6 +1,6 @@
 # IRISv2 Mart Views Validation
 
-Generated at: 2026-06-19T10:34:56
+Generated at: 2026-06-19T11:27:25
 
 This validation is read-only. It queries existing `iris_mart` views and does not modify PostgreSQL objects or run scoring.
 
@@ -97,11 +97,11 @@ Extra checks:
 
 | num_sinistre | sinistre_sk | code_garantie | libelle_garantie | score_global | risk_level | confidence_level | rule_code | rule_name | rule_category | observed_value | threshold_value | rule_weight | rule_contribution |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S17511000021299 | 18033 | CAS |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 9.0 | >5 jours | 15.0000 | 15.000000 |
-| S17511000008168 | 18034 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 31.0 | >5 jours | 15.0000 | 15.000000 |
-| S21511000023079 | 18036 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 12.0 | >5 jours | 15.0000 | 15.000000 |
-| S23511000003827 | 18041 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 8.0 | >5 jours | 15.0000 | 15.000000 |
-| S24511000005679 | 18042 | CAS |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 12.0 | >5 jours | 15.0000 | 15.000000 |
+| S18510000004002 | 380 | RCC |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 1758.0 | >5 jours | 15.0000 | 15.000000 |
+| S25511000015136 | 18718 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 18.0 | >5 jours | 15.0000 | 15.000000 |
+| S24511000010616 | 21254 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 57.0 | >5 jours | 15.0000 | 15.000000 |
+| S17511000039628 | 227 | CAS |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 123.0 | >5 jours | 15.0000 | 15.000000 |
+| S16511000002845 | 385 | RCM |  | 11.538500 | NORMAL | RULE_BASED | DECLARATION_TARDIVE | Déclaration tardive | DELAI | 26.0 | >5 jours | 15.0000 | 15.000000 |
 
 ### vw_vehicle_history
 

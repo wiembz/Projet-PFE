@@ -8,6 +8,10 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from etl.common.step_logging import fail_step_run, finish_step_run, start_step_run
 
 
 @dataclass(frozen=True)
@@ -54,13 +58,27 @@ def run_scoring(
     total_steps = len(steps)
     for index, step in enumerate(steps, start=1):
         print(_step_banner(index, total_steps, step), flush=True)
-        return_code = _run_step(step)
-        if return_code != 0:
+        relative_script = str(step.script_path.relative_to(PROJECT_ROOT))
+        step_run_id = start_step_run(
+            etl_run_id,
+            step.label,
+            step_order=index,
+            script_path=relative_script,
+        )
+        try:
+            _run_step(step)
+        except subprocess.CalledProcessError as exc:
+            fail_step_run(step_run_id, exc)
             print(
-                f"[FAILED] {step.label} exited with return code {return_code}",
+                f"[FAILED] {step.label} exited with return code {exc.returncode}",
                 flush=True,
             )
-            return return_code
+            raise
+        except Exception as exc:
+            fail_step_run(step_run_id, exc)
+            raise
+        else:
+            finish_step_run(step_run_id, status="SUCCESS")
 
     print("Scoring orchestration completed successfully.", flush=True)
     return 0
@@ -131,7 +149,7 @@ def _run_step(step: ScoringStep) -> int:
         str(step.script_path),
         *step.arguments,
     ]
-    completed = subprocess.run(command, cwd=PROJECT_ROOT)
+    completed = subprocess.run(command, cwd=PROJECT_ROOT, check=True)
     return int(completed.returncode)
 
 
