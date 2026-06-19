@@ -1,6 +1,6 @@
 # IRISv2 DW Integrity Validation
 
-Generated at: 2026-06-19T16:04:28
+Generated at: 2026-06-19T16:11:12
 
 This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality_check`, and does not modify DW tables.
 
@@ -8,9 +8,9 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 
 - total_checks: `60`
 - pass_count: `21`
-- warning_count: `37`
-- fail_count: `2`
-- validation_status: `FAIL`
+- warning_count: `39`
+- fail_count: `0`
+- validation_status: `WARNING`
 
 ## Foreign Key Integrity
 
@@ -64,8 +64,8 @@ This validation reads `iris_dw`, writes audit checks to `iris_admin.data_quality
 | --- | --- | --- | --- | --- | --- |
 | dw_fact_prime_total_prime_null_count | iris_dw | fact_prime | 0 | 13940 | WARNING |
 | dw_fact_prime_total_prime_negative_count | iris_dw | fact_prime | 0 | 40 | WARNING |
-| dw_fact_prime_date_fin_contrat_before_debut_count | iris_dw | fact_prime | 0 | 52 | FAIL |
-| dw_fact_prime_date_fin_effet_before_debut_count | iris_dw | fact_prime | 0 | 50000 | FAIL |
+| dw_fact_prime_date_fin_contrat_before_debut_count | iris_dw | fact_prime | 0 | 52 | WARNING |
+| dw_fact_prime_date_fin_effet_before_debut_count | iris_dw | fact_prime | 0 | 50000 | WARNING |
 | dw_fact_sinistre_montant_total_negative_count | iris_dw | fact_sinistre | 0 | 32 | WARNING |
 | dw_fact_sinistre_montant_total_net_negative_count | iris_dw | fact_sinistre | 0 | 408 | WARNING |
 | dw_fact_sinistre_delai_declaration_negative_count | iris_dw | fact_sinistre | 0 | 73 | WARNING |

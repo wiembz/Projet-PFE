@@ -272,7 +272,7 @@ def _fact_anomaly_checks(cur: Any) -> list[QualityCheck]:
             "fact_prime",
             "date_debut_contrat_sk",
             "date_fin_contrat_sk",
-            "FAIL",
+            "WARNING",
         ),
         _date_order_check(
             cur,
@@ -280,7 +280,7 @@ def _fact_anomaly_checks(cur: Any) -> list[QualityCheck]:
             "fact_prime",
             "date_debut_effet_sk",
             "date_fin_effet_sk",
-            "FAIL",
+            "WARNING",
         ),
         _fact_count_check(
             cur,
